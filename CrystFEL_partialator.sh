@@ -5,7 +5,7 @@
 # input_dir: contains several stream files
 # output_dir: script will make.
 # --local: batch mode
-# --condor: 
+# --condor: submit to HTCondor
 #   ./run_partialator_batch.sh <input_dir> <output_dir> <laue_group> <cores> [--local|--condor]
 ###################################################################################################
 
