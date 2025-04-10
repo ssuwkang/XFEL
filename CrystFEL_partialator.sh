@@ -2,6 +2,10 @@
 ###################################################################################################
 # Run or submit partialator for each stream file in a directory
 # Usage:
+# input_dir: contains several stream files
+# output_dir: script will make.
+# --local: batch mode
+# --condor: 
 #   ./run_partialator_batch.sh <input_dir> <output_dir> <laue_group> <cores> [--local|--condor]
 ###################################################################################################
 
@@ -29,7 +33,7 @@ for stream_file in "$INPUT_DIR"/*.stream; do
 universe        = vanilla
 should_transfer_files = IF_NEEDED
 executable      = /bin/bash
-arguments       = -c "partialator -i '$stream_file' -o '$output_file' -y '$LAUE_GROUP' --iterations=1 --model=unity --push-res=0.5 -j '$NUM_CORES'"
+arguments       = -c \"partialator -i $stream_file -o $output_file -y $LAUE_GROUP --iterations=1 --model=unity --push-res=0.5 -j $NUM_CORES\"
 output          = ${log_prefix}.out
 error           = ${log_prefix}.err
 log             = ${log_prefix}.log
