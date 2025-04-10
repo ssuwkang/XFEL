@@ -1,6 +1,7 @@
 #!/bin/bash
 ###################################################################################################
-# Run or submit partialator for each stream file in a directory
+# updated: April 10, 2025
+# Run partialator for each stream file in a directory
 # Usage:
 # input_dir: contains several stream files
 # output_dir: script will make.
