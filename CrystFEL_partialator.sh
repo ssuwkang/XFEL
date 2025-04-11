@@ -1,56 +1,47 @@
 #!/bin/bash
 ###################################################################################################
-# updated: April 10, 2025
-# Run partialator for each stream file in a directory
-# Usage:
-# input_dir: contains several stream files
-# output_dir: script will make.
-# --local: batch mode
-# --condor: submit to HTCondor
-#   ./run_partialator_batch.sh <input_dir> <output_dir> <laue_group> <cores> [--local|--condor]
+# CrystFEL_partialator.sh
+# Runs partialator sequentially on stream files listed in stream.lst (e.g., ./aaa.stream)
+# Usage: ./CrystFEL_partialator.sh <symmetry> <num_cores>
+# Output files go to output_hkl/
+# Logs are stored in logs_partialator/
+# updated: Apr 11 2025
 ###################################################################################################
 
-if [ "$#" -lt 4 ]; then
-    echo "Usage: $0 <input_dir> <output_dir> <laue_group> <cores> [--local|--condor]"
+f [[ $# -ne 2 ]]; then
+    echo "Usage: $0 <symmetry> <num_cores>"
     exit 1
 fi
 
-INPUT_DIR="$1"
-OUTPUT_DIR="$2"
-LAUE_GROUP="$3"
-NUM_CORES="$4"
-MODE="${5:---condor}"  # default to --condor
+SYMMETRY="$1"
+NUM_CORES="$2"
 
+
+INPUT_LIST="stream.lst"
+OUTPUT_DIR="output_hkl"
 LOG_DIR="logs_partialator"
+
 mkdir -p "$OUTPUT_DIR" "$LOG_DIR"
 
-for stream_file in "$INPUT_DIR"/*.stream; do
-    filename=$(basename "$stream_file" .stream)
-    output_file="${OUTPUT_DIR}/${filename}.hkl"
-    log_prefix="${LOG_DIR}/${filename}"
+while IFS= read -r STREAM_PATH; do
+    [[ -z "$STREAM_PATH" ]] && continue
 
-    if [[ "$MODE" == "--condor" ]]; then
-        cat <<EOF | condor_submit
-universe        = vanilla
-should_transfer_files = IF_NEEDED
-executable      = /bin/bash
-arguments       = -c \"partialator -i $stream_file -o $output_file -y $LAUE_GROUP --iterations=1 --model=unity --push-res=0.5 -j $NUM_CORES\"
-output          = ${log_prefix}.out
-error           = ${log_prefix}.err
-log             = ${log_prefix}.log
-request_cpus    = $NUM_CORES
-request_memory  = 4 GB
-queue
-EOF
-        echo "[INFO] Submitted partialator job for $stream_file"
+    STREAM_PATH=$(echo "$STREAM_PATH" | xargs)
 
-    elif [[ "$MODE" == "--local" ]]; then
-        echo "[INFO] Running partialator locally on: $stream_file"
-        partialator -i "$stream_file" -o "$output_file" \
-            -y "$LAUE_GROUP" --iterations=1 --model=unity \
-            --push-res=0.5 -j "$NUM_CORES" > "${log_prefix}.out" 2> "${log_prefix}.err"
-    else
-        echo "[ERROR] Unknown mode: $MODE"
-        exit 1
+    if [[ ! -f "$STREAM_PATH" ]]; then
+        echo "[ERROR] Stream file not found: '$STREAM_PATH'"
+        continue
     fi
-done
+
+    BASENAME=$(basename "$STREAM_PATH" .stream)
+    OUTPUT_FILE="${OUTPUT_DIR}/${BASENAME}.hkl"
+    LOG_OUT="${LOG_DIR}/${BASENAME}.out"
+    LOG_ERR="${LOG_DIR}/${BASENAME}.err"
+
+    echo "[RUNNING] partialator on $STREAM_PATH"
+    partialator -i "$STREAM_PATH" -o "$OUTPUT_FILE" \
+        -y "$SYMMETRY" --iterations=1 --model=unity --push-res=0.5 -j "$NUM_CORES" \
+        > "$LOG_OUT" 2> "$LOG_ERR"
+done < "$INPUT_LIST"
+
+echo "[DONE] All partialator jobs attempted."
